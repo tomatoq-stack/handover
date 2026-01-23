@@ -18,12 +18,11 @@
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .header-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 0; }
         
-        /* 외부 링크 버튼 (스케줄 관리) */
+        /* 외부 링크 버튼 */
         .schedule-btn { 
             display: inline-flex; align-items: center; background: var(--schedule); color: white; 
             padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: bold;
         }
-        .schedule-btn:active { opacity: 0.8; }
 
         /* 필터 및 검색 */
         #therapistSelect, #searchInput { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 8px; box-sizing: border-box; font-size: 15px; outline: none; }
@@ -37,12 +36,15 @@
         .update-tag { font-size: 11px; color: var(--primary); font-weight: bold; text-align: right; line-height: 1.3; }
         .pt-desc { font-size: 13px; color: #666; margin-top: 4px; }
         
-        /* 상세 모달 */
+        /* 모달 디자인 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; }
         .modal-content { background: white; width: 85%; margin: 8vh auto; padding: 20px; border-radius: 20px; max-height: 80vh; overflow-y: auto; }
         .info-row { border-bottom: 1px solid #eee; padding: 10px 0; }
         .info-label { font-size: 11px; color: var(--primary); font-weight: bold; }
         .info-val { font-size: 15px; margin-top: 4px; line-height: 1.5; color: #333; }
+        
+        /* 초기 안내 메시지 */
+        .empty-msg { text-align: center; color: #999; margin-top: 60px; font-size: 15px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -52,15 +54,17 @@
 <div class="header">
     <div class="header-top">
         <h1 class="header-title">🏥 인수인계 모바일</h1>
-        <a href="https://msys.thebesttalk.co.kr/" target="_blank" class="schedule-btn">
-            🗓️ 치료 스케줄 관리
-        </a>
+        <a href="https://msys.thebesttalk.co.kr/" target="_blank" class="schedule-btn">🗓️ 치료 스케줄 관리</a>
     </div>
-    <select id="therapistSelect" onchange="handleFilter()"><option value="전체">전체 치료사 보기</option></select>
+    <select id="therapistSelect" onchange="handleFilter()">
+        <option value="">치료사를 선택하세요</option>
+    </select>
     <input type="text" id="searchInput" onkeyup="handleFilter()" placeholder="환자명 또는 차트번호 검색...">
 </div>
 
-<div id="listContainer" class="list-container"></div>
+<div id="listContainer" class="list-container">
+    <div class="empty-msg">상단에서 치료사를 선택하거나<br>환자 이름을 검색해 주세요.</div>
+</div>
 
 <div id="infoModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
@@ -71,6 +75,7 @@
 </div>
 
 <script>
+    // 배포된 웹 앱 URL
     const scriptURL = "https://script.google.com/macros/s/AKfycbzCxFGp2vIYP-ABvuLbunuaaq2M3Gq8ALqKrDocb8ogEwhl6FW4vCk2THlJtH-SHU2g/exec";
     let allData = [];
 
@@ -80,19 +85,42 @@
             allData = await resp.json();
             const select = document.getElementById('therapistSelect');
             const names = [...new Set(allData.map(d => d.작성치료사))].filter(n => n).sort();
-            names.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.innerText = n + " 치료사"; select.appendChild(opt); });
-            handleFilter();
+            
+            names.forEach(n => { 
+                const opt = document.createElement('option'); 
+                opt.value = n; 
+                opt.innerText = n + " 치료사"; 
+                select.appendChild(opt); 
+            });
+
             document.getElementById('loadingOverlay').style.opacity = '0';
             setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 500);
-        } catch (e) { alert("데이터 연동 실패! 웹 앱 URL을 확인하세요."); }
+        } catch (e) { alert("데이터 연동 실패! 주소를 확인하세요."); }
     };
 
     function handleFilter() {
         const sel = document.getElementById('therapistSelect').value;
-        const q = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = allData.filter(d => (sel === "전체" || d.작성치료사 === sel) && (d.환자명.toLowerCase().includes(q) || d.등록번호.toString().includes(q)));
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        const container = document.getElementById('listContainer');
+
+        // 둘 다 비어있으면 초기 안내 메시지 출력
+        if (!sel && !q) {
+            container.innerHTML = '<div class="empty-msg">상단에서 치료사를 선택하거나<br>환자 이름을 검색해 주세요.</div>';
+            return;
+        }
+
+        const filtered = allData.filter(d => {
+            const matchesTherapist = sel === "" || d.작성치료사 === sel;
+            const matchesSearch = q === "" || (d.환자명.toLowerCase().includes(q) || d.등록번호.toString().includes(q));
+            return matchesTherapist && matchesSearch;
+        });
         
-        document.getElementById('listContainer').innerHTML = filtered.map(d => `
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-msg">일치하는 환자가 없습니다.</div>';
+            return;
+        }
+
+        container.innerHTML = filtered.map(d => `
             <div class="card" onclick="openModal(${allData.indexOf(d)})">
                 <div class="card-header">
                     <div class="pt-name">${d.환자명}</div>
@@ -112,7 +140,4 @@
     }
 </script>
 </body>
-</html>
-</body>
-
 </html>
