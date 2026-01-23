@@ -7,7 +7,7 @@
     <style>
         :root { --primary: #1a73e8; --warn: #d93025; --bg: #f8f9fa; --schedule: #673ab7; --edit: #34a853; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 0; }
-        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: 0.5s; }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .header { position: sticky; top: 0; background: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; }
@@ -18,22 +18,22 @@
         #therapistSelect, #searchInput { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 8px; box-sizing: border-box; font-size: 15px; outline: none; }
         #therapistSelect { border: 1.5px solid var(--primary); background: #f0f7ff; }
         .list-container { padding: 15px; }
-        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
+        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); cursor: pointer; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .pt-name { font-size: 17px; font-weight: bold; }
         .update-tag { font-size: 11px; color: var(--primary); font-weight: bold; text-align: right; }
-        .warn-tag { color: var(--warn); font-size: 12px; margin-top: 10px; font-weight: bold; background: #fff1f0; padding: 5px 10px; border-radius: 6px; display: inline-block; border: 1px solid #ffccc7; }
+        .warn-tag { color: var(--warn); font-size: 12px; margin-top: 10px; font-weight: bold; background: #fff1f0; padding: 6px 10px; border-radius: 6px; display: inline-block; border: 1px solid #ffccc7; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; }
-        .modal-content { background: white; width: 85%; margin: 8vh auto; padding: 20px; border-radius: 20px; max-height: 80vh; overflow-y: auto; }
-        .info-row { border-bottom: 1px solid #eee; padding: 10px 0; }
-        .info-label { font-size: 11px; color: var(--primary); font-weight: bold; }
-        .info-val { font-size: 15px; margin-top: 4px; line-height: 1.5; color: #333; }
+        .modal-content { background: white; width: 88%; margin: 6vh auto; padding: 20px; border-radius: 20px; max-height: 85vh; overflow-y: auto; }
+        .info-row { border-bottom: 1px solid #eee; padding: 12px 0; }
+        .info-label { font-size: 11px; color: var(--primary); font-weight: bold; margin-bottom: 3px; }
+        .info-val { font-size: 15px; line-height: 1.5; color: #333; word-break: break-all; }
         .empty-msg { text-align: center; color: #aaa; margin-top: 50px; }
     </style>
 </head>
 <body>
 
-<div id="loadingOverlay"><div class="spinner"></div><div style="margin-top:10px; color:var(--primary);">데이터 로딩 중...</div></div>
+<div id="loadingOverlay"><div class="spinner"></div><div style="margin-top:10px;">데이터를 불러오는 중...</div></div>
 
 <div class="header">
     <div class="header-top">
@@ -43,17 +43,17 @@
             <a href="https://docs.google.com/spreadsheets/d/1yzlhdV0tzz3qFDl8sE0eZLA1KcwHhAqVfgbMtvzyxdU/edit" target="_blank" class="nav-btn" style="background:var(--edit);">📝 시트편집</a>
         </div>
     </div>
-    <select id="therapistSelect" onchange="handleFilter()"><option value="">치료사를 선택하세요</option></select>
+    <select id="therapistSelect" onchange="handleFilter()"><option value="">치료사 선택</option></select>
     <input type="text" id="searchInput" onkeyup="handleFilter()" placeholder="환자명 또는 차트번호 검색...">
 </div>
 
-<div id="listContainer" class="list-container"><div class="empty-msg">치료사 선택 또는 검색을 해주세요.</div></div>
+<div id="listContainer" class="list-container"><div class="empty-msg">치료사를 선택하거나 이름을 검색하세요.</div></div>
 
 <div id="infoModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 id="mTitle" style="color:var(--primary); margin-top:0; border-bottom:2px solid var(--primary); padding-bottom:10px;">환자 상세 정보</h3>
+        <h3 style="color:var(--primary); margin-top:0; border-bottom:2px solid var(--primary); padding-bottom:10px;">환자 상세 정보</h3>
         <div id="mBody"></div>
-        <button onclick="document.getElementById('infoModal').style.display='none'" style="width:100%; padding:12px; background:#eee; border:none; border-radius:10px; margin-top:15px; font-weight:bold;">닫기</button>
+        <button onclick="document.getElementById('infoModal').style.display='none'" style="width:100%; padding:15px; background:#f0f0f0; border:none; border-radius:12px; margin-top:20px; font-weight:bold; color:#555;">닫기</button>
     </div>
 </div>
 
@@ -69,7 +69,7 @@
             const names = [...new Set(allData.map(d => d.작성치료사))].filter(n => n).sort();
             names.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.innerText = n + " 치료사"; select.appendChild(opt); });
             document.getElementById('loadingOverlay').style.display = 'none';
-        } catch (e) { alert("데이터 연동 실패!"); }
+        } catch (e) { alert("연동 실패! 네트워크를 확인하세요."); }
     };
 
     function handleFilter() {
@@ -92,18 +92,35 @@
             <div class="card" onclick="openModal(${allData.indexOf(d)})">
                 <div class="card-header">
                     <div class="pt-name">${d.환자명 || '이름없음'}</div>
-                    <div class="update-tag">수정일시<br>${d.최종수정 || '-'}</div>
+                    <div class="update-tag">수정시간<br>${d.최종수정 || '-'}</div>
                 </div>
                 <div style="font-size:13px; color:#666; margin-top:5px;">${d.작성치료사} / 차트:${d.등록번호 || '-'} / ${d.진단명 || '-'}</div>
-                ${(d.주의사항 && d.주의사항 !== '-') ? `<div class="warn-tag">⚠️ 주의: ${d.주의사항}</div>` : ''}
+                ${(d.주의사항 && d.주의사항 !== '-') ? `<div class="warn-tag">⚠️ ${d.주의사항}</div>` : ''}
             </div>
         `).join('') : '<div class="empty-msg">검색 결과가 없습니다.</div>';
     }
 
     function openModal(idx) {
         const d = allData[idx];
-        const fields = [['담당', d.작성치료사],['환자명(차트)', `${d.환자명}(${d.등록번호})`],['진단명', d.진단명],['치료시간', d.치료시간],['주의사항', d.주의사항],['기능상태', d.현재기능상태],['치료목표', d.현재치료목표],['좋아하는놀이', d.좋아하는놀이]];
-        document.getElementById('mBody').innerHTML = fields.map(f => `<div class="info-row"><div class="info-label">${f[0]}</div><div class="info-val">${f[1] || '-'}</div></div>`).join('');
+        // 요청하신 10가지 항목 매핑
+        const fields = [
+            ['담당 치료사', d.작성치료사],
+            ['환자명(차트번호)', `${d.환자명 || '-'} (${d.등록번호 || '-'})`],
+            ['진단명', d.진단명],
+            ['치료 시간', d.치료시간],
+            ['현재 기능 상태', d.현재기능상태],
+            ['현재 치료 목표', d.현재치료목표],
+            ['좋아하는 놀이', d.좋아하는놀이],
+            ['주의사항', d.주의사항],
+            ['원하는 치료 방향', d.원하는치료방향],
+            ['보호자 전달사항', d.보호자전달사항]
+        ];
+        document.getElementById('mBody').innerHTML = fields.map(f => `
+            <div class="info-row">
+                <div class="info-label">${f[0]}</div>
+                <div class="info-val">${f[1] || '-'}</div>
+            </div>
+        `).join('');
         document.getElementById('infoModal').style.display = 'block';
     }
 </script>
