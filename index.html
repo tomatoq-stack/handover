@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>치료사 인수인계 시스템 (Mobile)</title>
+    <style>
+        :root { --primary: #1a73e8; --warn: #d93025; --bg: #f8f9fa; --success: #34a853; }
+        body { font-family: -apple-system, 'Malgun Gothic', sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
+
+        /* 로딩 오버레이 */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { margin-top: 15px; font-size: 16px; color: var(--primary); font-weight: bold; }
+
+        /* 헤더 고정 영역 */
+        .header { 
+            position: sticky; top: 0; background: white; z-index: 1000;
+            padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header-title { font-size: 18px; font-weight: bold; color: var(--primary); text-align: center; margin-bottom: 12px; }
+        
+        /* 선택 및 검색창 */
+        #therapistSelect { 
+            width: 100%; padding: 12px; border-radius: 12px; border: 2px solid #eee; 
+            font-size: 16px; margin-bottom: 10px; outline: none; background: #fff;
+        }
+        #searchInput { 
+            width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; 
+            box-sizing: border-box; font-size: 15px; outline: none;
+        }
+
+        /* 카드 리스트 */
+        .list-container { padding: 15px; }
+        .patient-card { 
+            background: white; border-radius: 15px; padding: 16px; margin-bottom: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid var(--primary);
+            transition: transform 0.2s;
+        }
+        .patient-card:active { transform: scale(0.98); }
+        .card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .pt-name { font-size: 17px; font-weight: bold; color: #111; }
+        .tr-time { color: var(--primary); font-weight: bold; font-size: 14px; }
+        .diag-text { font-size: 13px; color: #666; }
+        .warn-tag { color: var(--warn); font-size: 12px; margin-top: 8px; font-weight: bold; }
+
+        /* 상세 정보 모달 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; backdrop-filter: blur(3px); }
+        .modal-content { background: white; width: 85%; max-width: 400px; margin: 8vh auto; padding: 25px; border-radius: 20px; max-height: 80vh; overflow-y: auto; position: relative; }
+        .info-row { border-bottom: 1px solid #f0f0f0; padding: 10px 0; }
+        .info-label { font-size: 11px; color: var(--primary); font-weight: bold; text-transform: uppercase; }
+        .info-value { font-size: 15px; margin-top: 4px; line-height: 1.5; white-space: pre-wrap; color: #333; }
+        .close-btn { width: 100%; padding: 15px; background: #f0f0f0; border: none; border-radius: 12px; margin-top: 20px; font-weight: bold; font-size: 16px; color: #555; }
+
+        /* 시트 바로가기 버튼 */
+        .sheet-btn { padding: 15px; margin: 10px 15px; background: var(--success); color: white; text-align: center; border-radius: 12px; text-decoration: none; font-weight: bold; display: block; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">최신 인수인계 데이터를 불러오는 중...</div>
+</div>
+
+<div class="header">
+    <div class="header-title">🏥 인수인계 모바일 시스템</div>
+    <select id="therapistSelect" onchange="handleFilter()">
+        <option value="전체">전체 치료사 보기</option>
+    </select>
+    <input type="text" id="searchInput" onkeyup="handleFilter()" placeholder="환자명 또는 등록번호 검색...">
+</div>
+
+<div id="listContainer" class="list-container"></div>
+
+<a href="https://docs.google.com/spreadsheets/d/본인의_시트_ID" class="sheet-btn">🟢 구글 스프레드시트 앱으로 열기</a>
+
+<div id="infoModal" class="modal" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 id="modalTitle" style="color:var(--primary); margin-top:0; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">환자 상세 정보</h3>
+        <div id="modalBody"></div>
+        <button class="close-btn" onclick="document.getElementById('infoModal').style.display='none'">닫기</button>
+    </div>
+</div>
+
+<script>
+    // 🚨 본인의 웹 앱 URL 주소 확인
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzCxFGp2vIYP-ABvuLbunuaaq2M3Gq8ALqKrDocb8ogEwhl6FW4vCk2THlJtH-SHU2g/exec";
+    let allData = [];
+
+    // 페이지 로드 시 실행
+    window.onload = async function() {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        try {
+            const resp = await fetch(scriptURL);
+            allData = await resp.json();
+            
+            // 치료사 목록 가나다순 정렬 후 드롭다운 채우기
+            const select = document.getElementById('therapistSelect');
+            const names = [...new Set(allData.map(d => d.작성치료사))].filter(n => n);
+            names.sort().forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n; opt.innerText = n + " 치료사";
+                select.appendChild(opt);
+            });
+            
+            handleFilter(); // 초기 리스트 렌더링
+
+            // 로딩 화면 부드럽게 제거
+            setTimeout(() => {
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => { loadingOverlay.style.display = 'none'; }, 500);
+            }, 300);
+
+        } catch (e) {
+            document.querySelector('.loading-text').innerHTML = "❌ 데이터 연동 실패<br><small>인터넷 연결을 확인하세요.</small>";
+            console.error(e);
+        }
+    };
+
+    // 필터링 및 리스트 출력
+    function handleFilter() {
+        const selectedTherapist = document.getElementById('therapistSelect').value;
+        const query = document.getElementById('searchInput').value.toLowerCase().replace(/\s+/g, '');
+        
+        const filtered = allData.filter(d => {
+            const matchesTherapist = (selectedTherapist === "전체" || d.작성치료사 === selectedTherapist);
+            const matchesSearch = (
+                (d.환자명 && d.환자명.toString().toLowerCase().includes(query)) || 
+                (d.등록번호 && d.등록번호.toString().includes(query))
+            );
+            return matchesTherapist && matchesSearch;
+        });
+        
+        renderCards(filtered);
+    }
+    function renderCards(data) {
+        const container = document.getElementById('listContainer');
+        if (data.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:#999; margin-top:50px;'>일치하는 환자가 없습니다.</p>";
+            return;
+        }
+        
+        container.innerHTML = data.map(d => `
+            <div class="patient-card" onclick="openModal(${allData.indexOf(d)})">
+                <div class="card-row">
+                    <div class="pt-main-info">
+                        ${d.환자명 || '이름없음'}
+                        <span class="pt-sub-details">
+                            ${d.작성치료사} / 차트:${d.등록번호 || '-'} / ${d.진단명 || '-'}
+                        </span>
+                    </div>
+                    <div class="update-time" style="color: var(--primary); font-weight: bold;">
+                        수정됨<br>${d.최종수정시간}
+                    </div>
+                </div>
+                <div style="font-size: 11px; color: #aaa; margin-top: 5px;">치료시간: ${d.치료시간 || '-'}</div>
+                ${(d.주의사항 && d.주의사항 !== '-') ? `<div class="warn-tag">⚠️ ${d.주의사항}</div>` : ''}
+            </div>
+        `).join('');
+    }
+    // 상세 모달 열기
+    function openModal(idx) {
+        const d = allData[idx];
+        const modalBody = document.getElementById('modalBody');
+        
+        const fields = [
+            ['담당 치료사', d.작성치료사],
+            ['환자명(등록번호)', `${d.환자명} (${d.등록번호})`],
+            ['치료시간', d.치료시간],
+            ['진단명', d.진단명],
+            ['현재 기능 상태', d.현재기능상태],
+            ['현재 치료 목표', d.현재치료목표],
+            ['좋아하는 놀이', d.좋아하는놀이],
+            ['⚠️ 주의사항', d.주의사항],
+            ['🎯 치료 방향', d.원하는치료방향],
+            ['💬 전달사항', d.보호자전달사항]
+        ];
+
+        modalBody.innerHTML = fields.map(f => `
+            <div class="info-row">
+                <div class="info-label">${f[0]}</div>
+                <div class="info-value ${f[0].includes('⚠️') && f[1] !== '-' ? 'warn-val' : ''}">${f[1] || '-'}</div>
+            </div>
+        `).join('');
+        
+        document.getElementById('infoModal').style.display = 'block';
+    }
+
+    function closeModal(e) { 
+        document.getElementById('infoModal').style.display = 'none'; 
+    }
+</script>
+
+</body>
+</html>
