@@ -8,7 +8,7 @@
         :root { --primary: #1a73e8; --warn: #d93025; --bg: #f8f9fa; --schedule: #673ab7; --edit: #34a853; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 0; color: #333; }
         .app-container { max-width: 600px; margin: 0 auto; background: var(--bg); min-height: 100vh; }
-        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.3s; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .header { position: sticky; top: 0; background: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; }
@@ -34,7 +34,11 @@
 </head>
 <body>
 <div class="app-container">
-    <div id="loadingOverlay"><div class="spinner"></div><div style="margin-top:10px;">데이터 동기화 중...</div></div>
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div id="loadingText" style="margin-top:10px;">데이터 동기화 중...</div>
+    </div>
+    
     <div class="header">
         <div class="header-top">
             <h1 class="header-title" onclick="location.reload()">🏥 인수인계 앱</h1>
@@ -48,6 +52,7 @@
     </div>
     <div id="listContainer" class="list-container"><div class="empty-msg">치료사를 선택하거나 검색해 주세요.</div></div>
 </div>
+
 <div id="infoModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 style="color:var(--primary); margin-top:0; border-bottom:3px solid var(--primary); padding-bottom:12px;">📋 상세 정보</h3>
@@ -55,37 +60,93 @@
         <button style="width:100%; padding:15px; background:#f0f0f0; border:none; border-radius:12px; margin-top:20px; font-weight:bold; cursor:pointer;" onclick="document.getElementById('infoModal').style.display='none'">닫기</button>
     </div>
 </div>
+
 <script>
+    // [중요] 새로 배포한 GAS URL을 여기에 입력하세요
     const scriptURL = "https://script.google.com/macros/s/AKfycbzCxFGp2vIYP-ABvuLbunuaaq2M3Gq8ALqKrDocb8ogEwhl6FW4vCk2THlJtH-SHU2g/exec";
     let allData = [];
+
     window.onload = async function() {
+        const loader = document.getElementById('loadingOverlay');
+        const loadText = document.getElementById('loadingText');
+
+        // 1. 로컬 캐시 확인 (즉시 렌더링)
+        const cached = localStorage.getItem('handoff_cache');
+        if (cached) {
+            allData = JSON.parse(cached);
+            updateInterface();
+            loader.style.background = "rgba(255,255,255,0.7)"; 
+            loadText.innerText = "최신 데이터 업데이트 중...";
+        }
+
         try {
+            // 2. 서버 데이터 비동기 호출
             const resp = await fetch(scriptURL);
-            allData = await resp.json();
-            const select = document.getElementById('therapistSelect');
-            const names = [...new Set(allData.map(d => d.작성치료사))].filter(n => n).sort();
-            names.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.innerText = n + " 치료사"; select.appendChild(opt); });
-            document.getElementById('loadingOverlay').style.display = 'none';
-        } catch (e) { alert("연동 실패!"); }
+            const newData = await resp.json();
+            
+            // 데이터가 바뀐 경우에만 화면 갱신 및 저장
+            if (JSON.stringify(newData) !== cached) {
+                allData = newData;
+                localStorage.setItem('handoff_cache', JSON.stringify(newData));
+                updateInterface();
+            }
+        } catch (e) {
+            console.error("데이터 연동 실패:", e);
+            if (!cached) alert("최초 데이터 로드 실패! 인터넷 연결을 확인하세요.");
+        } finally {
+            loader.style.display = 'none';
+        }
     };
+
+    function updateInterface() {
+        const select = document.getElementById('therapistSelect');
+        const currentVal = select.value;
+        const names = [...new Set(allData.map(d => d.작성치료사))].filter(n => n).sort();
+        
+        select.innerHTML = '<option value="">👨‍⚕️ 치료사 선택</option>';
+        names.forEach(n => { 
+            const opt = document.createElement('option'); 
+            opt.value = n; 
+            opt.innerText = n + " 치료사"; 
+            if(n === currentVal) opt.selected = true;
+            select.appendChild(opt); 
+        });
+
+        if (currentVal || document.getElementById('searchInput').value) {
+            handleFilter();
+        }
+    }
+
     function handleFilter() {
         const sel = document.getElementById('therapistSelect').value;
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         const container = document.getElementById('listContainer');
-        if (!sel && !q) { container.innerHTML = '<div class="empty-msg">상단 필터를 이용해 주세요.</div>'; return; }
+        
+        if (!sel && !q) { 
+            container.innerHTML = '<div class="empty-msg">치료사를 선택하거나 검색해 주세요.</div>'; 
+            return; 
+        }
+
         const filtered = allData.filter(d => {
             const mTherapist = sel === "" || d.작성치료사 === sel;
-            const mSearch = q === "" || (d.환자명 && d.환자명.toString().toLowerCase().includes(q)) || (d.등록번호 && d.등록번호.toString().includes(q));
+            const mSearch = q === "" || 
+                (d.환자명 && d.환자명.toString().toLowerCase().includes(q)) || 
+                (d.등록번호 && d.등록번호.toString().includes(q));
             return mTherapist && mSearch;
         });
+
         container.innerHTML = filtered.length ? filtered.map(d => `
             <div class="card" onclick="openModal(${allData.indexOf(d)})">
-                <div class="card-header"><div class="pt-name">${d.환자명 || '이름없음'}</div><div class="update-tag">수정시간<br>${d.최종수정 || '-'}</div></div>
+                <div class="card-header">
+                    <div class="pt-name">${d.환자명 || '이름없음'}</div>
+                    <div class="update-tag">수정시간<br>${d.최종수정 || '-'}</div>
+                </div>
                 <div style="font-size:13px; color:#666; margin-top:6px;">${d.작성치료사} / 차트:${d.등록번호 || '-'} / ${d.진단명 || '-'}</div>
                 ${(d.주의사항 && d.주의사항 !== '-' && d.주의사항 !== '') ? `<div class="warn-tag">⚠️ ${d.주의사항}</div>` : ''}
             </div>
         `).join('') : '<div class="empty-msg">결과 없음</div>';
     }
+
     function openModal(idx) {
         const d = allData[idx];
         const fields = [
@@ -100,7 +161,12 @@
             ['🚀 원하는 치료 방향', d.원하는치료방향],
             ['💬 보호자 전달사항', d.보호자전달사항]
         ];
-        document.getElementById('mBody').innerHTML = fields.map(f => `<div class="info-row"><div class="info-label">${f[0]}</div><div class="info-val">${f[1] || '-'}</div></div>`).join('');
+        document.getElementById('mBody').innerHTML = fields.map(f => `
+            <div class="info-row">
+                <div class="info-label">${f[0]}</div>
+                <div class="info-val">${f[1] || '-'}</div>
+            </div>
+        `).join('');
         document.getElementById('infoModal').style.display = 'block';
     }
 </script>
