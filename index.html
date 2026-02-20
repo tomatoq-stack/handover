@@ -42,7 +42,7 @@
             <h1 class="header-title" onclick="location.reload()">🏥 인수인계 앱</h1>
             <div class="btn-group">
                 <a href="https://msys.thebesttalk.co.kr/" target="_blank" class="nav-btn" style="background:var(--schedule);">🗓️ 스케줄</a>
-                <a href="YOUR_SPREADSHEET_URL" target="_blank" class="nav-btn" style="background:var(--edit);">📝 시트편집</a>
+                <a href="https://docs.google.com/spreadsheets/d/1yzlhdV0tzz3qFDl8sE0eZLA1KcwHhAqVfgbMtvzyxdU/edit?gid=0#gid=0" target="_blank" class="nav-btn" style="background:var(--edit);">📝 시트편집</a>
             </div>
         </div>
         <select id="therapistSelect" onchange="handleFilter()"><option value="">👨‍⚕️ 치료사 선택</option></select>
@@ -60,7 +60,7 @@
 </div>
 
 <script>
-    const scriptURL = "여기에_새로_배포한_GAS_URL을_넣으세요";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzCxFGp2vIYP-ABvuLbunuaaq2M3Gq8ALqKrDocb8ogEwhl6FW4vCk2THlJtH-SHU2g/exec";
     let allData = [];
 
     window.onload = async function() {
@@ -151,3 +151,4 @@
 </script>
 </body>
 </html>
+
