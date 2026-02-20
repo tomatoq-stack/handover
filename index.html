@@ -8,7 +8,7 @@
         :root { --primary: #1a73e8; --warn: #d93025; --bg: #f8f9fa; --schedule: #673ab7; --edit: #34a853; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 0; color: #333; }
         .app-container { max-width: 600px; margin: 0 auto; background: var(--bg); min-height: 100vh; }
-        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.3s; }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .header { position: sticky; top: 0; background: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; }
@@ -16,19 +16,17 @@
         .header-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 0; cursor: pointer; }
         .btn-group { display: flex; gap: 6px; }
         .nav-btn { color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: bold; }
-        #therapistSelect, #searchInput { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 8px; box-sizing: border-box; font-size: 15px; outline: none; }
-        #therapistSelect { border: 2px solid var(--primary); background: #f0f7ff; }
+        #therapistSelect, #searchInput { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 8px; box-sizing: border-box; font-size: 15px; }
         .list-container { padding: 15px; }
         .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); cursor: pointer; }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .pt-name { font-size: 17px; font-weight: bold; }
-        .update-tag { font-size: 11px; color: var(--primary); font-weight: bold; text-align: right; }
-        .warn-tag { color: var(--warn); font-size: 12px; margin-top: 10px; font-weight: bold; background: #fff1f0; padding: 8px; border-radius: 6px; display: block; border: 1px solid #ffccc7; }
+        .update-tag { font-size: 11px; color: var(--primary); text-align: right; }
+        .warn-tag { color: var(--warn); font-size: 12px; margin-top: 10px; font-weight: bold; background: #fff1f0; padding: 8px; border-radius: 6px; border: 1px solid #ffccc7; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; }
         .modal-content { background: white; width: 88%; max-width: 500px; margin: 5vh auto; padding: 20px; border-radius: 20px; max-height: 85vh; overflow-y: auto; }
         .info-row { border-bottom: 1px solid #eee; padding: 12px 0; }
-        .info-label { font-size: 11px; color: var(--primary); font-weight: bold; margin-bottom: 4px; }
-        .info-val { font-size: 15px; line-height: 1.6; color: #333; white-space: pre-wrap; }
+        .info-label { font-size: 11px; color: var(--primary); font-weight: bold; }
+        .info-val { font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
         .empty-msg { text-align: center; color: #aaa; margin-top: 60px; }
     </style>
 </head>
@@ -44,59 +42,50 @@
             <h1 class="header-title" onclick="location.reload()">🏥 인수인계 앱</h1>
             <div class="btn-group">
                 <a href="https://msys.thebesttalk.co.kr/" target="_blank" class="nav-btn" style="background:var(--schedule);">🗓️ 스케줄</a>
-                <a href="https://docs.google.com/spreadsheets/d/1yzlhdV0tzz3qFDl8sE0eZLA1KcwHhAqVfgbMtvzyxdU/edit" target="_blank" class="nav-btn" style="background:var(--edit);">📝 시트편집</a>
+                <a href="YOUR_SPREADSHEET_URL" target="_blank" class="nav-btn" style="background:var(--edit);">📝 시트편집</a>
             </div>
         </div>
         <select id="therapistSelect" onchange="handleFilter()"><option value="">👨‍⚕️ 치료사 선택</option></select>
         <input type="text" id="searchInput" onkeyup="handleFilter()" placeholder="🔍 환자명 또는 차트번호 검색...">
     </div>
-    <div id="listContainer" class="list-container"><div class="empty-msg">치료사를 선택하거나 검색해 주세요.</div></div>
+    <div id="listContainer" class="list-container"></div>
 </div>
 
 <div id="infoModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 style="color:var(--primary); margin-top:0; border-bottom:3px solid var(--primary); padding-bottom:12px;">📋 상세 정보</h3>
         <div id="mBody"></div>
-        <button style="width:100%; padding:15px; background:#f0f0f0; border:none; border-radius:12px; margin-top:20px; font-weight:bold; cursor:pointer;" onclick="document.getElementById('infoModal').style.display='none'">닫기</button>
+        <button style="width:100%; padding:15px; background:#f0f0f0; border:none; border-radius:12px; margin-top:20px; font-weight:bold;" onclick="document.getElementById('infoModal').style.display='none'">닫기</button>
     </div>
 </div>
 
 <script>
-    // [중요] 새로 배포한 GAS URL을 여기에 입력하세요
-    const scriptURL = "https://script.google.com/macros/s/AKfycbzCxFGp2vIYP-ABvuLbunuaaq2M3Gq8ALqKrDocb8ogEwhl6FW4vCk2THlJtH-SHU2g/exec";
+    const scriptURL = "여기에_새로_배포한_GAS_URL을_넣으세요";
     let allData = [];
 
     window.onload = async function() {
-        const loader = document.getElementById('loadingOverlay');
-        const loadText = document.getElementById('loadingText');
-
-        // 1. 로컬 캐시 확인 (즉시 렌더링)
         const cached = localStorage.getItem('handoff_cache');
         if (cached) {
             allData = JSON.parse(cached);
             updateInterface();
-            loader.style.background = "rgba(255,255,255,0.7)"; 
-            loadText.innerText = "최신 데이터 업데이트 중...";
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
+        await fetchData();
+    };
 
+    async function fetchData() {
         try {
-            // 2. 서버 데이터 비동기 호출
             const resp = await fetch(scriptURL);
             const newData = await resp.json();
-            
-            // 데이터가 바뀐 경우에만 화면 갱신 및 저장
-            if (JSON.stringify(newData) !== cached) {
-                allData = newData;
-                localStorage.setItem('handoff_cache', JSON.stringify(newData));
-                updateInterface();
-            }
+            allData = newData;
+            localStorage.setItem('handoff_cache', JSON.stringify(newData));
+            updateInterface();
         } catch (e) {
-            console.error("데이터 연동 실패:", e);
-            if (!cached) alert("최초 데이터 로드 실패! 인터넷 연결을 확인하세요.");
+            console.error("데이터 로드 실패", e);
         } finally {
-            loader.style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
-    };
+    }
 
     function updateInterface() {
         const select = document.getElementById('therapistSelect');
@@ -105,16 +94,12 @@
         
         select.innerHTML = '<option value="">👨‍⚕️ 치료사 선택</option>';
         names.forEach(n => { 
-            const opt = document.createElement('option'); 
-            opt.value = n; 
-            opt.innerText = n + " 치료사"; 
+            const opt = document.createElement('option');
+            opt.value = n; opt.innerText = n + " 치료사";
             if(n === currentVal) opt.selected = true;
             select.appendChild(opt); 
         });
-
-        if (currentVal || document.getElementById('searchInput').value) {
-            handleFilter();
-        }
+        handleFilter();
     }
 
     function handleFilter() {
@@ -122,14 +107,9 @@
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         const container = document.getElementById('listContainer');
         
-        if (!sel && !q) { 
-            container.innerHTML = '<div class="empty-msg">치료사를 선택하거나 검색해 주세요.</div>'; 
-            return; 
-        }
-
         const filtered = allData.filter(d => {
-            const mTherapist = sel === "" || d.작성치료사 === sel;
-            const mSearch = q === "" || 
+            const mTherapist = !sel || d.작성치료사 === sel;
+            const mSearch = !q || 
                 (d.환자명 && d.환자명.toString().toLowerCase().includes(q)) || 
                 (d.등록번호 && d.등록번호.toString().includes(q));
             return mTherapist && mSearch;
@@ -137,28 +117,27 @@
 
         container.innerHTML = filtered.length ? filtered.map(d => `
             <div class="card" onclick="openModal(${allData.indexOf(d)})">
-                <div class="card-header">
+                <div style="display:flex; justify-content:space-between;">
                     <div class="pt-name">${d.환자명 || '이름없음'}</div>
-                    <div class="update-tag">수정시간<br>${d.최종수정 || '-'}</div>
+                    <div class="update-tag">수정: ${d.최종수정 || '-'}</div>
                 </div>
-                <div style="font-size:13px; color:#666; margin-top:6px;">${d.작성치료사} / 차트:${d.등록번호 || '-'} / ${d.진단명 || '-'}</div>
-                ${(d.주의사항 && d.주의사항 !== '-' && d.주의사항 !== '') ? `<div class="warn-tag">⚠️ ${d.주의사항}</div>` : ''}
+                <div style="font-size:13px; color:#666; margin-top:6px;">${d.작성치료사} / 차트:${d.등록번호 || '-'}</div>
+                ${d.주의사항 ? `<div class="warn-tag">⚠️ ${d.주의사항}</div>` : ''}
             </div>
-        `).join('') : '<div class="empty-msg">결과 없음</div>';
+        `).join('') : '<div class="empty-msg">데이터가 없습니다.</div>';
     }
 
     function openModal(idx) {
         const d = allData[idx];
+        // 시트 헤더의 (괄호)를 제외한 이름과 일치해야 합니다.
         const fields = [
             ['👤 담당 치료사', d.작성치료사],
-            ['👶 환자명(차트)', `${d.환자명 || '-'} (${d.등록번호 || '-'})`],
-            ['🕒 치료 시간', d.치료시간],
+            ['👶 환자명', d.환자명],
+            ['🔢 등록번호', d.등록번호],
             ['🩺 진단명', d.진단명],
             ['📊 현재 기능 상태', d.현재기능상태],
             ['🎯 현재 치료 목표', d.현재치료목표],
-            ['🧸 좋아하는 놀이', d.좋아하는놀이],
             ['⚠️ 주의사항', d.주의사항],
-            ['🚀 원하는 치료 방향', d.원하는치료방향],
             ['💬 보호자 전달사항', d.보호자전달사항]
         ];
         document.getElementById('mBody').innerHTML = fields.map(f => `
