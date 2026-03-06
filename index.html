@@ -15,18 +15,20 @@
         .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .header-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 0; cursor: pointer; }
         .btn-group { display: flex; gap: 6px; }
-        .nav-btn { color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: bold; }
-        #therapistSelect, #searchInput { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 8px; box-sizing: border-box; font-size: 15px; }
+        .nav-btn { color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: bold; transition: opacity 0.2s; }
+        .nav-btn:active { opacity: 0.7; }
+        #therapistSelect, #searchInput { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 8px; box-sizing: border-box; font-size: 15px; outline: none; }
+        #therapistSelect { border: 2px solid var(--primary); background: #f0f7ff; }
         .list-container { padding: 15px; }
         .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); cursor: pointer; }
         .pt-name { font-size: 17px; font-weight: bold; }
         .update-tag { font-size: 11px; color: var(--primary); text-align: right; }
-        .warn-tag { color: var(--warn); font-size: 12px; margin-top: 10px; font-weight: bold; background: #fff1f0; padding: 8px; border-radius: 6px; border: 1px solid #ffccc7; }
+        .warn-tag { color: var(--warn); font-size: 12px; margin-top: 10px; font-weight: bold; background: #fff1f0; padding: 8px; border-radius: 6px; border: 1px solid #ffccc7; display: block; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; }
         .modal-content { background: white; width: 88%; max-width: 500px; margin: 5vh auto; padding: 20px; border-radius: 20px; max-height: 85vh; overflow-y: auto; }
         .info-row { border-bottom: 1px solid #eee; padding: 12px 0; }
-        .info-label { font-size: 11px; color: var(--primary); font-weight: bold; }
-        .info-val { font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+        .info-label { font-size: 11px; color: var(--primary); font-weight: bold; margin-bottom: 4px; }
+        .info-val { font-size: 15px; line-height: 1.6; color: #333; white-space: pre-wrap; }
         .empty-msg { text-align: center; color: #aaa; margin-top: 60px; }
     </style>
 </head>
@@ -55,11 +57,12 @@
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 style="color:var(--primary); margin-top:0; border-bottom:3px solid var(--primary); padding-bottom:12px;">📋 상세 정보</h3>
         <div id="mBody"></div>
-        <button style="width:100%; padding:15px; background:#f0f0f0; border:none; border-radius:12px; margin-top:20px; font-weight:bold;" onclick="document.getElementById('infoModal').style.display='none'">닫기</button>
+        <button style="width:100%; padding:15px; background:#f0f0f0; border:none; border-radius:12px; margin-top:20px; font-weight:bold; cursor:pointer;" onclick="document.getElementById('infoModal').style.display='none'">닫기</button>
     </div>
 </div>
 
 <script>
+    // 배포 후 생성된 본인의 GAS 웹앱 URL을 입력하세요.
     const scriptURL = "https://script.google.com/macros/s/AKfycbzCxFGp2vIYP-ABvuLbunuaaq2M3Gq8ALqKrDocb8ogEwhl6FW4vCk2THlJtH-SHU2g/exec";
     let allData = [];
 
@@ -117,7 +120,7 @@
 
         container.innerHTML = filtered.length ? filtered.map(d => `
             <div class="card" onclick="openModal(${allData.indexOf(d)})">
-                <div style="display:flex; justify-content:space-between;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div class="pt-name">${d.환자명 || '이름없음'}</div>
                     <div class="update-tag">수정: ${d.최종수정 || '-'}</div>
                 </div>
@@ -129,14 +132,16 @@
 
     function openModal(idx) {
         const d = allData[idx];
-        // 시트 헤더의 (괄호)를 제외한 이름과 일치해야 합니다.
+        // 모달 표시 항목 설정
         const fields = [
             ['👤 담당 치료사', d.작성치료사],
-            ['👶 환자명', d.환자명],
-            ['🔢 등록번호', d.등록번호],
+            ['👶 환자명(등록번호)', `${d.환자명 || '-'} (${d.등록번호 || '-'})`],
+            ['🕒 치료 시간', d.치료시간],
             ['🩺 진단명', d.진단명],
             ['📊 현재 기능 상태', d.현재기능상태],
             ['🎯 현재 치료 목표', d.현재치료목표],
+            ['🧸 좋아하는 놀이', d.좋아하는놀이],
+            ['🚀 원하는 치료 방향', d.원하는치료방향],
             ['⚠️ 주의사항', d.주의사항],
             ['💬 보호자 전달사항', d.보호자전달사항]
         ];
@@ -151,4 +156,3 @@
 </script>
 </body>
 </html>
-
